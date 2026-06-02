@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Reflection;
 using Microsoft.Unity.VisualStudio.Editor;
 using UnityEditor;
 using UnityEngine;
@@ -65,7 +66,7 @@ namespace HelixUnitySupport
             {
                 ConfigureProjectGenerationFlags();
 
-                var generator = new ProjectGeneration();
+                IGenerator generator = CreateUnityProjectGenerator();
                 generator.Sync();
                 Debug.Log("[HelixUnity] Generated Unity project files.");
                 return true;
@@ -75,6 +76,20 @@ namespace HelixUnitySupport
                 Debug.LogError($"[HelixUnity] Unity project generator failed. Project files were not modified by Helix fallback logic.\n{ex}");
                 return false;
             }
+        }
+
+        private static IGenerator CreateUnityProjectGenerator()
+        {
+            Assembly assembly = typeof(ProjectGeneration).Assembly;
+            Type generatorStyleType = assembly.GetType("Microsoft.Unity.VisualStudio.Editor.GeneratorStyle", true);
+            Type generatorFactoryType = assembly.GetType("Microsoft.Unity.VisualStudio.Editor.GeneratorFactory", true);
+            MethodInfo getInstance = generatorFactoryType.GetMethod("GetInstance", BindingFlags.Public | BindingFlags.Static);
+
+            if (getInstance == null)
+                throw new MissingMethodException(generatorFactoryType.FullName, "GetInstance");
+
+            object sdkStyle = Enum.ToObject(generatorStyleType, 1);
+            return (IGenerator)getInstance.Invoke(null, new[] { sdkStyle });
         }
 
         private static void ConfigureProjectGenerationFlags()
