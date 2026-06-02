@@ -11,7 +11,8 @@ This package registers Helix as a Unity external script editor, opens files at t
 - Launches Helix in an available terminal on Linux/macOS.
 - Adds a Unity menu for setting Helix as the external editor.
 - Regenerates Unity project files through Unity's Visual Studio project generator.
-- Ensures the solution includes all generated root `.csproj` files.
+- Enables Unity project generation for embedded, local, registry, git, built-in, unknown, and local tarball package sources.
+- Refuses to generate project files while `.meta` files contain merge conflict markers.
 
 ## Install In Unity
 
@@ -31,19 +32,18 @@ You can also select `Helix Code Editor` from Unity preferences if Unity lists it
 
 ## Helix C# LSP
 
-Install OmniSharp and configure Helix with a valid executable path.
+Install `csharp-ls` or OmniSharp and configure Helix with a valid executable path.
 
 Example `~/.config/helix/languages.toml`:
 
 ```toml
-[language-server.omnisharp]
-command = "/usr/bin/omnisharp"
-args = [ "-lsp" ]
-timeout = 10000
+[language-server.csharp-ls]
+command = "/home/fcolor04/.dotnet/tools/csharp-ls"
+timeout = 60000
 
 [[language]]
 name = "c-sharp"
-language-servers = [ "omnisharp" ]
+language-servers = [ "csharp-ls" ]
 roots = [ "*.sln", "*.csproj" ]
 ```
 
@@ -52,6 +52,8 @@ Verify with:
 ```sh
 helix --health c-sharp
 ```
+
+If Helix reports that the language server exited, regenerate project files from Unity first and check Unity's console for `HelixUnity` errors. Invalid `.meta` files or stale generated project files can prevent C# language servers from loading the workspace.
 
 ## Configuration
 

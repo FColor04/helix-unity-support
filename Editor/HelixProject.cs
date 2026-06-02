@@ -1,7 +1,7 @@
 using System;
-using System.Diagnostics;
+using System.Collections.Generic;
 using System.IO;
-using System.Linq;
+using Microsoft.Unity.VisualStudio.Editor;
 using UnityEditor;
 using UnityEngine;
 using Debug = UnityEngine.Debug;
@@ -10,6 +10,17 @@ namespace HelixUnitySupport
 {
     public static class HelixProject
     {
+        private const string ProjectGenerationFlagEditorPref = "unity_project_generation_flag";
+
+        private const ProjectGenerationFlag DesiredProjectGenerationFlags =
+            ProjectGenerationFlag.Embedded |
+            ProjectGenerationFlag.Local |
+            ProjectGenerationFlag.Registry |
+            ProjectGenerationFlag.Git |
+            ProjectGenerationFlag.BuiltIn |
+            ProjectGenerationFlag.Unknown |
+            ProjectGenerationFlag.LocalTarBall;
+
         public static bool Exists()
         {
             string slnPath = Path.Combine(HelixUtils.ProjectRoot, $"{Path.GetFileName(HelixUtils.ProjectRoot)}.sln");
@@ -37,75 +48,77 @@ namespace HelixUnitySupport
 
         public static void GenerateAll()
         {
+            if (TryFindMetaFileWithMergeConflict(out string metaFile))
+            {
+                Debug.LogError($"[HelixUnity] Cannot generate project files while a Unity .meta file contains merge conflict markers: {metaFile}");
+                return;
+            }
+
             AssetDatabase.Refresh();
 
-            if (GenerateUnityProjectFiles())
-                return;
-
-            Debug.LogWarning("[HelixUnity] Unity project generator was unavailable; falling back to existing root .csproj files.");
-            EnsureSolutionIncludesAllProjects();
+            GenerateUnityProjectFiles();
         }
 
         private static bool GenerateUnityProjectFiles()
         {
             try
             {
-                var generator = new Microsoft.Unity.VisualStudio.Editor.ProjectGeneration();
+                ConfigureProjectGenerationFlags();
+
+                var generator = new ProjectGeneration();
                 generator.Sync();
-                EnsureSolutionIncludesAllProjects();
                 Debug.Log("[HelixUnity] Generated Unity project files.");
                 return true;
             }
             catch (Exception ex)
             {
-                Debug.LogWarning($"[HelixUnity] Unity project generator failed: {ex.Message}");
+                Debug.LogError($"[HelixUnity] Unity project generator failed. Project files were not modified by Helix fallback logic.\n{ex}");
                 return false;
             }
         }
 
-        private static void EnsureSolutionIncludesAllProjects()
+        private static void ConfigureProjectGenerationFlags()
         {
-            if (!HelixUtils.ExistsOnPath("dotnet"))
-            {
-                Debug.LogWarning("[HelixUnity] dotnet is not on PATH, skipping solution update.");
-                return;
-            }
+            ProjectGenerationFlag currentFlags = (ProjectGenerationFlag)EditorPrefs.GetInt(
+                ProjectGenerationFlagEditorPref,
+                (int)(ProjectGenerationFlag.Local | ProjectGenerationFlag.Embedded));
 
-            string solutionPath = Path.Combine(HelixUtils.ProjectRoot, $"{Path.GetFileName(HelixUtils.ProjectRoot)}.sln");
-            string[] projectFiles = Directory.GetFiles(HelixUtils.ProjectRoot, "*.csproj", SearchOption.TopDirectoryOnly);
-
-            if (projectFiles.Length == 0)
+            ProjectGenerationFlag nextFlags = currentFlags | DesiredProjectGenerationFlags;
+            if (nextFlags == currentFlags)
                 return;
 
-            try
-            {
-                if (!File.Exists(solutionPath))
-                    RunDotnet($"new sln --name {HelixUtils.QuoteArgument(Path.GetFileName(HelixUtils.ProjectRoot))}");
-
-                string projectArgs = string.Join(" ", projectFiles.OrderBy(Path.GetFileName, StringComparer.OrdinalIgnoreCase).Select(HelixUtils.QuoteArgument));
-                RunDotnet($"sln {HelixUtils.QuoteArgument(solutionPath)} add {projectArgs}");
-            }
-            catch (Exception ex)
-            {
-                Debug.LogWarning($"[HelixUnity] Failed to update solution projects: {ex.Message}");
-            }
+            EditorPrefs.SetInt(ProjectGenerationFlagEditorPref, (int)nextFlags);
+            Debug.Log($"[HelixUnity] Enabled Unity project generation for package sources: {nextFlags}");
         }
 
-        private static void RunDotnet(string arguments)
+        private static bool TryFindMetaFileWithMergeConflict(out string metaFile)
         {
-            var psi = new ProcessStartInfo
+            foreach (string root in ExistingProjectRoots())
             {
-                FileName = "dotnet",
-                Arguments = arguments,
-                WorkingDirectory = HelixUtils.ProjectRoot,
-                UseShellExecute = false,
-                CreateNoWindow = true
-            };
+                foreach (string path in Directory.EnumerateFiles(root, "*.meta", SearchOption.AllDirectories))
+                {
+                    string text = File.ReadAllText(path);
+                    if (!text.Contains("<<<<<<<") && !text.Contains("=======") && !text.Contains(">>>>>>>"))
+                        continue;
 
-            using (Process process = Process.Start(psi))
-            {
-                process?.WaitForExit();
+                    metaFile = HelixUtils.MakeRelativePath(path);
+                    return true;
+                }
             }
+
+            metaFile = null;
+            return false;
+        }
+
+        private static IEnumerable<string> ExistingProjectRoots()
+        {
+            string assetsPath = Path.Combine(HelixUtils.ProjectRoot, "Assets");
+            if (Directory.Exists(assetsPath))
+                yield return assetsPath;
+
+            string packagesPath = Path.Combine(HelixUtils.ProjectRoot, "Packages");
+            if (Directory.Exists(packagesPath))
+                yield return packagesPath;
         }
     }
 }

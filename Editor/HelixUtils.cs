@@ -32,6 +32,22 @@ namespace HelixUnitySupport
 #endif
         }
 
+        public static string MakeRelativePath(string path)
+        {
+            if (string.IsNullOrEmpty(path))
+                return path;
+
+            string normalizedPath = NormalizePath(Path.GetFullPath(path));
+            string normalizedRoot = NormalizePath(Path.GetFullPath(ProjectRoot));
+
+            if (!normalizedRoot.EndsWith(Path.DirectorySeparatorChar.ToString()))
+                normalizedRoot += Path.DirectorySeparatorChar;
+
+            return normalizedPath.StartsWith(normalizedRoot, StringComparison.OrdinalIgnoreCase)
+                ? normalizedPath.Substring(normalizedRoot.Length)
+                : normalizedPath;
+        }
+
         public static bool IsInAssetsFolder(string path)
         {
             return path.Replace('\\', '/').Contains("Assets/");
