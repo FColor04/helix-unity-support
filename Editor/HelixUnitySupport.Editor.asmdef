@@ -1,0 +1,11 @@
+{
+    "name": "HelixUnitySupport.Editor",
+    "references": [
+        "Unity.VisualStudio.Editor"
+    ],
+    "optionalUnityReferences": [],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": []
+}

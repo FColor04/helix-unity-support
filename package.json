@@ -1,0 +1,16 @@
+{
+  "name": "com.fcolor04.helix-unity-support",
+  "version": "0.1.0",
+  "displayName": "Helix Unity Support",
+  "description": "Unity external editor integration for Helix, including file/line opening and project file regeneration.",
+  "unity": "2021.3",
+  "keywords": [
+    "helix",
+    "unity",
+    "editor",
+    "csharp"
+  ],
+  "author": {
+    "name": "FColor04"
+  }
+}
