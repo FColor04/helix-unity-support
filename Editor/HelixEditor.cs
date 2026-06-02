@@ -71,6 +71,7 @@ namespace HelixUnitySupport
                     {
                         FileName = helixPath,
                         Arguments = target,
+                        WorkingDirectory = HelixUtils.ProjectRoot,
                         UseShellExecute = true,
                         CreateNoWindow = false
                     }

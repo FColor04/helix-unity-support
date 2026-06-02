@@ -34,18 +34,24 @@ namespace HelixUnitySupport
 
         public static string MakeRelativePath(string path)
         {
+            return MakeRelativePath(path, ProjectRoot);
+        }
+
+        public static string MakeRelativePath(string path, string root)
+        {
             if (string.IsNullOrEmpty(path))
                 return path;
 
             string normalizedPath = NormalizePath(Path.GetFullPath(path));
-            string normalizedRoot = NormalizePath(Path.GetFullPath(ProjectRoot));
+            string normalizedRoot = NormalizePath(Path.GetFullPath(root));
 
             if (!normalizedRoot.EndsWith(Path.DirectorySeparatorChar.ToString()))
                 normalizedRoot += Path.DirectorySeparatorChar;
 
-            return normalizedPath.StartsWith(normalizedRoot, StringComparison.OrdinalIgnoreCase)
-                ? normalizedPath.Substring(normalizedRoot.Length)
-                : normalizedPath;
+            var rootUri = new Uri(normalizedRoot);
+            var pathUri = new Uri(normalizedPath);
+            string relativePath = Uri.UnescapeDataString(rootUri.MakeRelativeUri(pathUri).ToString());
+            return NormalizePath(string.IsNullOrEmpty(relativePath) ? "." : relativePath);
         }
 
         public static bool IsInAssetsFolder(string path)
@@ -128,6 +134,7 @@ namespace HelixUnitySupport
             {
                 FileName = terminal,
                 Arguments = arguments,
+                WorkingDirectory = ProjectRoot,
                 UseShellExecute = true,
                 CreateNoWindow = false
             };

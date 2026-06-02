@@ -11,7 +11,8 @@ This package registers Helix as a Unity external script editor, opens files at t
 - Launches Helix in an available terminal on Linux/macOS.
 - Adds a Unity menu for setting Helix as the external editor.
 - Regenerates Unity project files through Unity's Visual Studio project generator.
-- Enables Unity project generation for embedded, local, registry, git, built-in, unknown, and local tarball package sources.
+- Enables Unity project generation for embedded, local, git, unknown, and local tarball package sources.
+- Writes an isolated `.helix/lsp-root/BallGame.sln` plus a `csharp-ls` wrapper so Helix does not load nested Unity package solutions.
 - Refuses to generate project files while `.meta` files contain merge conflict markers.
 
 ## Install In Unity
@@ -37,14 +38,15 @@ Install `csharp-ls` or OmniSharp and configure Helix with a valid executable pat
 Example `~/.config/helix/languages.toml`:
 
 ```toml
-[language-server.csharp-ls]
-command = "/home/fcolor04/.dotnet/tools/csharp-ls"
-timeout = 60000
+[language-server.csharp-ls-unity]
+command = "/usr/bin/bash"
+args = ["/path/to/project/.helix/csharp-ls-unity"]
+timeout = 180
 
 [[language]]
 name = "c-sharp"
-language-servers = [ "csharp-ls" ]
-roots = [ "*.sln", "*.csproj" ]
+language-servers = [ "csharp-ls-unity" ]
+roots = [ "Assets", "Packages", "ProjectSettings", ".helix/lsp-root/BallGame.sln" ]
 ```
 
 Verify with:
