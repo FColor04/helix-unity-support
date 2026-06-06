@@ -107,6 +107,8 @@ namespace HelixUnitySupport
                 UseShellExecute = true,
                 CreateNoWindow = false
             };
+#elif UNITY_EDITOR_OSX
+            return CreateMacTerminalStartInfo(ProjectRoot, command, arguments);
 #else
             Dictionary<string, string> terminals = HelixPreferences.GetAvailableTerminals();
             string preferredTerminal = HelixPreferences.GetPreferredTerminal();
@@ -128,13 +130,88 @@ namespace HelixUnitySupport
 #endif
         }
 
+        public static ProcessStartInfo BuildOpenTerminalStartInfo(string workingDirectory)
+        {
+            string directory = string.IsNullOrEmpty(workingDirectory) ? ProjectRoot : workingDirectory;
+
+            if (!Directory.Exists(directory))
+            {
+                UnityEngine.Debug.LogError($"[HelixUnity] Cannot open terminal because the directory does not exist: {directory}");
+                return null;
+            }
+
+#if UNITY_EDITOR_WIN
+            string systemRoot = Environment.GetFolderPath(Environment.SpecialFolder.Windows);
+            string cmdPath = string.IsNullOrEmpty(systemRoot)
+                ? "cmd.exe"
+                : Path.Combine(systemRoot, "System32", "cmd.exe");
+
+            return new ProcessStartInfo
+            {
+                FileName = File.Exists(cmdPath) ? cmdPath : "cmd.exe",
+                Arguments = $"/K cd /d {QuoteWindowsCommandArgument(directory)}",
+                WorkingDirectory = directory,
+                UseShellExecute = true,
+                CreateNoWindow = false
+            };
+#elif UNITY_EDITOR_OSX
+            string script = $"cd {QuoteShellScriptArgument(directory)}";
+
+            return new ProcessStartInfo
+            {
+                FileName = "osascript",
+                Arguments = $"-e {QuoteArgument($"tell application \"Terminal\" to do script {QuoteAppleScriptString(script)}")}",
+                WorkingDirectory = directory,
+                UseShellExecute = true,
+                CreateNoWindow = false
+            };
+#else
+            Dictionary<string, string> terminals = HelixPreferences.GetAvailableTerminals();
+            string preferredTerminal = HelixPreferences.GetPreferredTerminal();
+
+            if (terminals.ContainsKey(preferredTerminal) && ExistsOnPath(preferredTerminal))
+                return CreateTerminalStartInfo(preferredTerminal, "", directory);
+
+            foreach (var terminal in terminals)
+            {
+                if (ExistsOnPath(terminal.Key))
+                    return CreateTerminalStartInfo(terminal.Key, "", directory);
+            }
+
+            UnityEngine.Debug.LogError("[HelixUnity] Failed to find a terminal.");
+            return null;
+#endif
+        }
+
         private static ProcessStartInfo CreateTerminalStartInfo(string terminal, string arguments)
+        {
+            return CreateTerminalStartInfo(terminal, arguments, ProjectRoot);
+        }
+
+        private static ProcessStartInfo CreateTerminalStartInfo(string terminal, string arguments, string workingDirectory)
         {
             return new ProcessStartInfo
             {
                 FileName = terminal,
                 Arguments = arguments,
-                WorkingDirectory = ProjectRoot,
+                WorkingDirectory = workingDirectory,
+                UseShellExecute = true,
+                CreateNoWindow = false
+            };
+        }
+
+        private static ProcessStartInfo CreateMacTerminalStartInfo(string workingDirectory, string command, string arguments)
+        {
+            string script = $"cd {QuoteShellScriptArgument(workingDirectory)} && {QuoteShellScriptArgument(command)}";
+
+            if (!string.IsNullOrWhiteSpace(arguments))
+                script += $" {arguments}";
+
+            return new ProcessStartInfo
+            {
+                FileName = "osascript",
+                Arguments = $"-e {QuoteArgument($"tell application \"Terminal\" to do script {QuoteAppleScriptString(script)}")}",
+                WorkingDirectory = workingDirectory,
                 UseShellExecute = true,
                 CreateNoWindow = false
             };
@@ -146,6 +223,27 @@ namespace HelixUnitySupport
                 return "\"\"";
 
             return "\"" + value.Replace("\\", "\\\\").Replace("\"", "\\\"") + "\"";
+        }
+
+        private static string QuoteShellScriptArgument(string value)
+        {
+            if (string.IsNullOrEmpty(value))
+                return "''";
+
+            return "'" + value.Replace("'", "'\\''") + "'";
+        }
+
+        private static string QuoteAppleScriptString(string value)
+        {
+            return "\"" + value.Replace("\\", "\\\\").Replace("\"", "\\\"") + "\"";
+        }
+
+        private static string QuoteWindowsCommandArgument(string value)
+        {
+            if (string.IsNullOrEmpty(value))
+                return "\"\"";
+
+            return "\"" + value.Replace("\"", "\\\"") + "\"";
         }
 
         public static bool ExistsOnPath(string fileName)

@@ -8,8 +8,9 @@ This package registers Helix as a Unity external script editor, opens files at t
 
 - Registers `Helix Code Editor` in Unity's external editor list.
 - Opens Unity script requests as `path:line:column`.
-- Launches Helix in an available terminal on Linux/macOS.
+- Launches Helix in an available terminal on Linux and Terminal.app on macOS.
 - Adds a Unity menu for setting Helix as the external editor.
+- Adds `Open in Terminal` to the Unity Project view context menu.
 - Regenerates Unity project files through Unity's Visual Studio project generator.
 - Enables Unity project generation for embedded, local, git, unknown, and local tarball package sources.
 - Writes an isolated `.helix/lsp-root/BallGame.sln` plus a `csharp-ls` wrapper so Helix does not load nested Unity package solutions.
@@ -61,11 +62,13 @@ If Helix reports that the language server exited, regenerate project files from 
 
 Set `HELIX_PATH` if Helix is not installed as `hx` or `helix` in a common path.
 
-On Linux/macOS, configure the preferred terminal in:
+On Linux, configure the preferred terminal in:
 
 ```text
 Edit > Preferences > Helix Unity
 ```
+
+On Linux, `Open in Terminal` uses the configured terminal preference, falling back through common terminal emulators and starting in the selected Project view folder. On macOS it opens Terminal.app at the selected path. On Windows it opens `cmd.exe` at the selected path.
 
 ## Development
 
