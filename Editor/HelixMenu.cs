@@ -4,7 +4,6 @@ using System.IO;
 using System.Linq;
 using Unity.CodeEditor;
 using UnityEditor;
-using UnityEditor.PackageManager;
 
 namespace HelixUnitySupport
 {
@@ -77,7 +76,8 @@ namespace HelixUnitySupport
         {
             if (assetPath.StartsWith("Packages/", StringComparison.OrdinalIgnoreCase))
             {
-                PackageInfo packageInfo = PackageInfo.FindForAssetPath(assetPath);
+                UnityEditor.PackageManager.PackageInfo packageInfo =
+                    UnityEditor.PackageManager.PackageInfo.FindForAssetPath(assetPath);
 
                 if (packageInfo != null && !string.IsNullOrEmpty(packageInfo.resolvedPath))
                 {
