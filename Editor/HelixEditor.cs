@@ -7,20 +7,24 @@ using UnityEngine;
 
 namespace HelixUnitySupport
 {
-    [InitializeOnLoad]
     public class HelixEditor : IExternalCodeEditor
     {
         private const string EditorName = "Helix Code Editor";
+        private static bool registered;
 
         public static string DefaultApp => EditorPrefs.GetString("kScriptsDefaultApp");
 
-        static HelixEditor()
+        public static bool RegisterIfAvailable()
         {
-            // Do not register an unavailable editor. Unity queries registered external
-            // editors while opening Preferences, and a placeholder path such as "hx"
-            // can leave that window loading indefinitely on machines without Helix.
-            if (HelixUtils.IsHelixAvailable())
-                CodeEditor.Register(new HelixEditor());
+            if (registered)
+                return true;
+
+            if (!HelixUtils.IsHelixAvailable())
+                return false;
+
+            CodeEditor.Register(new HelixEditor());
+            registered = true;
+            return true;
         }
 
         public string GetDisplayName()
@@ -42,6 +46,7 @@ namespace HelixUnitySupport
                 return;
             }
 
+            RegisterIfAvailable();
             EditorPrefs.SetString("kScriptsDefaultApp", helixPath);
         }
 

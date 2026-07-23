@@ -18,6 +18,8 @@ namespace HelixUnitySupport
         [MenuItem("Tools/Helix Code Editor/Regenerate Project Files")]
         public static void RegenerateProjectFiles()
         {
+            HelixEditor.RegisterIfAvailable();
+
             if (CodeEditor.CurrentEditor is HelixEditor editor)
                 editor.SyncAll();
             else
