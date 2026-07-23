@@ -25,6 +25,12 @@ namespace HelixUnitySupport
         [SettingsProvider]
         public static SettingsProvider CreateSettingsProvider()
         {
+            // Do not add a Helix page to Unity Preferences when Helix is not
+            // installed. This package is shared across machines with different
+            // editor setups, and an unavailable external editor must be inert.
+            if (!HelixUtils.IsHelixAvailable())
+                return null;
+
             return new SettingsProvider("Preferences/Helix Unity", SettingsScope.User)
             {
                 label = "Helix Unity",

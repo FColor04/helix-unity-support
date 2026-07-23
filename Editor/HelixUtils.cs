@@ -64,7 +64,7 @@ namespace HelixUnitySupport
             string configuredPath = Environment.GetEnvironmentVariable("HELIX_PATH");
 
             if (!string.IsNullOrEmpty(configuredPath))
-                return configuredPath;
+                return File.Exists(configuredPath) ? configuredPath : null;
 
 #if UNITY_EDITOR_WIN
             string[] fallbackPaths = new[]
@@ -94,7 +94,20 @@ namespace HelixUnitySupport
             };
 #endif
 
-            return fallbackPaths.FirstOrDefault(File.Exists) ?? "hx";
+            string fallbackPath = fallbackPaths.FirstOrDefault(File.Exists);
+            if (!string.IsNullOrEmpty(fallbackPath))
+                return fallbackPath;
+
+#if UNITY_EDITOR_WIN
+            return GetFullPath("hx.exe") ?? GetFullPath("helix.exe") ?? GetFullPath("hx") ?? GetFullPath("helix");
+#else
+            return GetFullPath("hx") ?? GetFullPath("helix");
+#endif
+        }
+
+        public static bool IsHelixAvailable()
+        {
+            return !string.IsNullOrEmpty(GetHelixPath());
         }
 
         public static ProcessStartInfo BuildTerminalProcessStartInfo(string command, string arguments)

@@ -16,7 +16,11 @@ namespace HelixUnitySupport
 
         static HelixEditor()
         {
-            CodeEditor.Register(new HelixEditor());
+            // Do not register an unavailable editor. Unity queries registered external
+            // editors while opening Preferences, and a placeholder path such as "hx"
+            // can leave that window loading indefinitely on machines without Helix.
+            if (HelixUtils.IsHelixAvailable())
+                CodeEditor.Register(new HelixEditor());
         }
 
         public string GetDisplayName()
@@ -31,7 +35,14 @@ namespace HelixUnitySupport
 
         public static void SetAsDefaultEditor()
         {
-            EditorPrefs.SetString("kScriptsDefaultApp", HelixUtils.GetHelixPath());
+            string helixPath = HelixUtils.GetHelixPath();
+            if (string.IsNullOrEmpty(helixPath))
+            {
+                UnityEngine.Debug.LogWarning("[HelixUnity] Helix was not found. Install Helix or set HELIX_PATH before selecting it as the external editor.");
+                return;
+            }
+
+            EditorPrefs.SetString("kScriptsDefaultApp", helixPath);
         }
 
         public bool OpenProject(string path, int line, int column)
@@ -62,6 +73,12 @@ namespace HelixUnitySupport
             try
             {
                 string helixPath = HelixUtils.GetHelixPath();
+                if (string.IsNullOrEmpty(helixPath))
+                {
+                    UnityEngine.Debug.LogWarning("[HelixUnity] Helix was not found. Install Helix or set HELIX_PATH before opening files.");
+                    return false;
+                }
+
                 string target = filePath == HelixUtils.ProjectRoot
                     ? HelixUtils.QuoteArgument(filePath)
                     : HelixUtils.QuoteArgument($"{filePath}:{line}:{column}");
@@ -108,13 +125,16 @@ namespace HelixUnitySupport
         }
 
         public CodeEditor.Installation[] Installations => new[]
-        {
-            new CodeEditor.Installation
-            {
-                Name = EditorName,
-                Path = HelixUtils.GetHelixPath()
-            }
-        };
+            string.IsNullOrEmpty(HelixUtils.GetHelixPath())
+                ? Array.Empty<CodeEditor.Installation>()
+                : new[]
+                {
+                    new CodeEditor.Installation
+                    {
+                        Name = EditorName,
+                        Path = HelixUtils.GetHelixPath()
+                    }
+                };
 
         public void SyncAll()
         {
@@ -138,12 +158,13 @@ namespace HelixUnitySupport
 
         public bool TryGetInstallationForPath(string path, out CodeEditor.Installation installation)
         {
-            if (path == HelixUtils.GetHelixPath())
+            string helixPath = HelixUtils.GetHelixPath();
+            if (!string.IsNullOrEmpty(helixPath) && path == helixPath)
             {
                 installation = new CodeEditor.Installation
                 {
                     Name = EditorName,
-                    Path = HelixUtils.GetHelixPath()
+                    Path = helixPath
                 };
                 return true;
             }
