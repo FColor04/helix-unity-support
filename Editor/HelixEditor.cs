@@ -124,7 +124,7 @@ namespace HelixUnitySupport
         {
         }
 
-        public CodeEditor.Installation[] Installations => new[]
+        public CodeEditor.Installation[] Installations =>
             string.IsNullOrEmpty(HelixUtils.GetHelixPath())
                 ? Array.Empty<CodeEditor.Installation>()
                 : new[]
